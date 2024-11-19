@@ -3,10 +3,14 @@ package com.example.eventify.security.jwt;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,11 +19,24 @@ import java.util.function.Function;
 @Component
 public class JwtTokenUtil {
 
-    @Value("${spring.jwt.secret}")
-    private String secret;
+    private final String secret = "+LNpjAriCvssWh4y9Gy+8g==+LNpjAriCvssWh4y9Gy+8g==";
+
+    private SecretKey key;  // Cambiado a SecretKey
 
     @Value("${spring.jwt.token.validity}")
     private long tokenValidity;
+
+    @PostConstruct
+    public void init() {
+
+        System.out.println("SECRET: " + secret);
+        if (secret == null || secret.isEmpty()) {
+            System.out.println("Entro aquí");
+            throw new IllegalArgumentException("Secret key cannot be null or empty");
+        }
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        System.out.println("LA KEY VALE: " + this.key);
+    }
 
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
@@ -43,18 +60,19 @@ public class JwtTokenUtil {
         return expiration.before(new Date());
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateToken(claims, userDetails.getUsername());
+        return doGenerateToken(claims, username);
     }
 
-    private String doGenerateToken(Map<String, Object> claims, String subject) {
+    public String doGenerateToken(Map<String, Object> claims, String subject) {
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + tokenValidity * 1000))
-                .signWith(SignatureAlgorithm.HS512, secret)
+                .setExpiration(new Date(System.currentTimeMillis() + this.tokenValidity * 1000))
+                .signWith(this.key, SignatureAlgorithm.HS256) // Usa la clave y el algoritmo correctos
                 .compact();
     }
 

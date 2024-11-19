@@ -1,5 +1,6 @@
 package com.example.eventify.controllers;
 
+import com.example.eventify.requests.LoginRequest;
 import com.example.eventify.requests.RegisterRequest;
 import com.example.eventify.services.UsuarioService;
 import org.springframework.http.ResponseEntity;
@@ -37,5 +38,25 @@ public class AuthController {
         userService.registerUser(registerRequest);
 
         return ResponseEntity.ok("Usuario registrado con éxito");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
+        System.out.println("Entro login user");
+        // Lógica para autenticar al usuario
+        if (!userService.authenticateUser(loginRequest.getUsername(), loginRequest.getPassword())) {
+            System.out.println("Entro login user primer if");
+            return ResponseEntity
+                    .badRequest()
+                    .body("Error: Credenciales incorrectas!");
+        }
+
+        // Generar token JWT
+        System.out.println("USERNAME DEL LOGIN REQUEST: " + loginRequest.getUsername());
+        String token = userService.generateToken(loginRequest.getUsername());
+
+        System.out.println("Devuelvo el token");
+
+        return ResponseEntity.ok(token);
     }
 }
